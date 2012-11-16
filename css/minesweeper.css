@@ -1,7 +1,9 @@
 body {
-   font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
-   min-width: 320px;
-   color: rgb(56,55,56);
+    /* HelveticaNeue-Light blows up on iOS when it gets bolded :/ I don't really
+       want to track down a solution right now. */
+    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", HelveticaNeue, Helvetica, Arial, "Lucida Grande", sans-serif;
+    min-width: 320px;
+    color: rgb(56,55,56);
 }
 #wrapper {
     float: left;

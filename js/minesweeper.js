@@ -2,14 +2,15 @@ var minesweeper;
 $(document).ready(function () {
     'use strict';
     minesweeper = {
-        // Configuring these properties controls the difficulty. I couldn't
-        // come up with an interface I liked for exposing them so I hid it.
+        // Configuring these properties controls how the board is built.
         mines: 10,
-        rows: 11,
-        cols: 11,
+        rows: 8,
+        cols: 8,
 
         buildBoard: function buildBoard() {
-            var table = '<table>',
+            // Try building the DOM elements hidden to see if that speeds
+            // things up.
+            var table = '<table class="hidden">',
                 sprites = '',
                 i, j, pos;
             for (i = 1; i <= minesweeper.rows; i++) {
@@ -17,16 +18,15 @@ $(document).ready(function () {
                 for (j = 1; j <= minesweeper.cols; j++) {
                     pos = j + '_' + i;
                     table += '<td id="c' + pos + '" class="covered"></td>';
-                    sprites += '<div id="s' + pos + '" class="sprite"></div>';
+                    sprites += '<div id="s' + pos + '"  class="hidden sprite"></div>';
                 }
                 table += '</tr>';
             }
             table += '</table>';
-            $('#board').html(table);
+            $('#board').html(table).removeClass('hidden');
             $('#center').append(sprites);
-            // $('#sprites').append(sprites);
             // Put the sprites on top of the tiles
-            $('.sprite').each(function () {
+            $('.sprite').removeClass('hidden').each(function () {
                 var $cell =  $('#' + this.id.replace('s', 'c')),
                     pos = $cell.position();
                 $(this).css({
@@ -45,19 +45,18 @@ $(document).ready(function () {
         resetBoard: function resetBoard() {
             var $board = $('#board'),
                 $sprites = $('.sprite'),
+                interval = 1 / $sprites.length,
                 tl;
 
             $board.css({opacity: 0}).removeClass('playing win loss');
-            $sprites.css({'z-index': 1, opacity: 0});
+            $sprites.css({opacity: 0}).show();
 
             tl = new TimelineLite();
-            tl.staggerTo($sprites, 0.5, {css: {opacity: 1}}, 0.005, 0, null, function () {
-                $board.css({opacity: 1});
-            });
-            tl.staggerTo($sprites, 0.5, {css: {opacity: 0}}, 0.005, 0, null, function () {
-                // Put the sprites in back where they don't catch
-                // clicks.
-                $sprites.css({'z-index': -1});
+            tl.staggerTo($sprites, 0.5, {css: {opacity: 1}}, interval, 0);
+            tl.to($board, 0.5, {css: {opacity: 1}});
+            tl.staggerTo($sprites, 0.5, {css: {opacity: 0}}, interval, -1);
+            tl.call(function () {
+                $sprites.hide();
             });
 
             $('#menu').fadeOut(400, function () {
@@ -157,7 +156,7 @@ $(document).ready(function () {
                 $sprites = minesweeper.spritesForTiles($tiles),
                 tl;
 
-            $sprites.css({'z-index': 1, 'opacity': 1});
+            $sprites.css({'opacity': 1}).show();
             $tiles.removeClass('covered');
 
             $('#new,#cheat,#verify').fadeOut(400, function () {
@@ -166,9 +165,7 @@ $(document).ready(function () {
 
             tl = new TimelineLite();
             tl.to($sprites, 0.5, {css: {opacity: 0}}, 0, 0, null, function () {
-                // Put the sprites in back where they don't catch
-                // clicks.
-                $sprites.css({'z-index': -1});
+                $sprites.hide();
             });
         },
         cellClickHandler: function cellClickHandler(event) {
@@ -187,16 +184,18 @@ $(document).ready(function () {
                 $('#new,#verify').fadeIn();
             }
 
-            $sprites.css({'z-index': 1, 'opacity': 1});
+            $sprites.css({'opacity': 1}).show();
             $this.removeClass('covered');
             TweenLite.to($sprites, 0.025, {
                 css: {opacity: 0},
                 onComplete: function () {
-                    $sprites.css({'z-index': 0});
+                    $sprites.hide();
                     if ($this.hasClass('mine')) {
+                        // TODO: It would be good if we distinguished the mine
+                        // they clicked on from the rest.
                         minesweeper.endWithLoss();
                     }
-                    else if ($this.text() == 0) {
+                    else if ($this.hasClass('empty')) {
                         minesweeper.adjacentTiles(id).filter('.covered').click();
                     }
                 }
@@ -218,6 +217,7 @@ $(document).ready(function () {
         },
         cheatClickHandler: function cheatClickHandler(event) {
             event.preventDefault();
+            $('#title').text('Mine Cheater');
             // Try to find an empty title at first...
             var tiles = minesweeper.pickRandomTiles(1, ".covered.empty");
             if (tiles.length === 0) {
@@ -232,15 +232,24 @@ $(document).ready(function () {
     $('#verify').on('click', 'a', minesweeper.verifyClickHandler);
     $('#cheat').on('click', 'a', minesweeper.cheatClickHandler);
 
-    // TODO: Should do more validation here.
-    var params = (window.location.hash || '').substr(1).split('x');
-    if (params.length > 1) {
-        minesweeper.rows = parseInt(params[0], 10);
-        minesweeper.cols = parseInt(params[1], 10);
-        if (params.length > 2) {
-            minesweeper.mines = parseInt(params[2], 10);
-        }
+    // TODO: reset and click animations are too slow on the larger sizes
+    // so I'm not exposing links to these.
+    var m, d;
+    switch (window.location.hash || '') {
+        case '#large':
+            d = 32;
+            m = 120;
+            break;
+        case '#medium':
+            d = 16;
+            m = 30;
+            break;
+        default:
+            d = 8;
+            m = 10;
+            break;
     }
-
+    minesweeper.rows = minesweeper.cols = d;
+    minesweeper.mines = m;
     minesweeper.buildBoard();
 });

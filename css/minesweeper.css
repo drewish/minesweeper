@@ -23,7 +23,8 @@ body {
     text-align: center;
     color: white;
     font-weight: bold;
-    /* Default to a warning color. */
+    /* Default to a warning color.
+       TODO: we see about setting the alpha based on the number of adjacent mines. */
     background-color: rgb(247, 148, 30);
 }
 #board.win td.mine {
@@ -50,4 +51,7 @@ body {
 .sprite {
     position: absolute;
     background-color: rgb(56, 55, 56); /*rgb(37, 170, 225);*/
+}
+.hidden {
+    display: none;
 }

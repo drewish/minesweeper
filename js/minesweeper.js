@@ -10,7 +10,7 @@ var minesweeper;
         buildBoard: function buildBoard() {
             // Try building the DOM elements hidden to see if that speeds
             // things up.
-            var i, j, table = '<table class="hidden">';
+            var i, j, table = '<table>';
             for (i = 1; i <= minesweeper.rows; i++) {
                 table += '<tr>';
                 for (j = 1; j <= minesweeper.cols; j++) {
@@ -28,25 +28,24 @@ var minesweeper;
             var $tiles = $('td'),
                 tl = new TimelineLite();
 
-            tl.to($tiles, 0.5, {css: {opacity: 0}});
-            tl.call(function () {
-                $('#board').removeClass('hidden playing win loss');
-            });
-            tl.staggerTo($tiles, 0.5, {css: {opacity: 1}}, 1 / $tiles.length, 0);
-
             $('#menu').fadeOut(400, function () {
                 $('#new,#verify').hide();
                 $('#cheat').show();
                 $('#menu').fadeIn();
             });
 
-            // Clear everything out.
-            $('#board td')
-                .removeClass('mine empty')
-                .addClass('covered')
-                .html('&nbsp');
+            tl.to($tiles, 0.5, {css: {opacity: 0}});
+            tl.call(function () {
+                $('#board').removeClass('playing win loss');
+                // Clear everything out.
+                $tiles
+                    .removeClass('mine empty adjacent')
+                    .addClass('covered')
+                    .html('&nbsp');
 
-            minesweeper.plantMines();
+            });
+            tl.staggerTo($tiles, 0.5, {css: {opacity: 1}}, 1 / $tiles.length);
+            tl.call(minesweeper.plantMines);
         },
         plantMines: function plantMines() {
             $(minesweeper.pickRandomTiles(minesweeper.mines)).addClass("mine");
@@ -59,6 +58,7 @@ var minesweeper;
                 .each(function () {
                     minesweeper.adjacentTiles(this.id).not('.mine')
                         .removeClass('empty')
+                        .addClass('adjacent')
                         .text(function (index, text) { return +text + 1;});
                 });
 

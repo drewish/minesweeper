@@ -1,6 +1,7 @@
 body {
    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
    min-width: 320px;
+   color: rgb(56,55,56);
 }
 #wrapper {
     float: left;
@@ -14,38 +15,41 @@ body {
 }
 #board {
     border-collapse:collapse;
-    background-color: #fff;
+    background-color: rgb(56,55,56);
 }
 #board td {
     height: 30px;
     width: 30px;
-    border: 1px solid #666;
+    border: 1px solid rgb(56,55,56);
     text-align: center;
     color: white;
     font-weight: bold;
-    /* Default to a warning color.
-       TODO: we see about setting the alpha based on the number of adjacent mines. */
+}
+/* Color scheme from http://www.colourlovers.com/palette/2530958/Supplies4Me */
+#board .adjacent {
+    /* Warning color. */
+    /* TODO: we see about setting the alpha based on the number of adjacent mines. */
     background-color: rgb(247, 148, 30);
 }
-#board.win td.mine {
+#board.win .mine {
     /* A nice green to show you what you found. */
     background-color: rgb(141, 198, 63);
 }
-#board.loss td.mine {
+#board.loss .mine {
     /* Well you stepped in something. */
     background-color: rgb(238, 39, 58);
 }
-#board td.empty {
+#board .empty {
     background-color: #fff;
 }
-#board td.covered {
-    background-color: rgb(72,0,80);
+#board .covered {
+    background-color: rgb(37,170,225);
     /* Get the text out of the way so the numbers don't appear if you
        highlight the table. You can still copy/paste but this avoids
        accidental display. */
     text-indent: -9999px;
 }
-#board td.covered:hover {
+#board .covered:hover {
     cursor: pointer;
 }
 .hidden {

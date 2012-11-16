@@ -39,7 +39,7 @@ body {
     background-color: #fff;
 }
 #board td.covered {
-    background-color: #eee;
+    background-color: rgb(72,0,80);
     /* Get the text out of the way so the numbers don't appear if you
        highlight the table. You can still copy/paste but this avoids
        accidental display. */
@@ -47,10 +47,6 @@ body {
 }
 #board td.covered:hover {
     cursor: pointer;
-}
-.sprite {
-    position: absolute;
-    background-color: rgb(56, 55, 56); /*rgb(37, 170, 225);*/
 }
 .hidden {
     display: none;

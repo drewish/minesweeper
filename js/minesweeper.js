@@ -1,5 +1,5 @@
 var minesweeper;
-$(document).ready(function () {
+(function ($) {
     'use strict';
     minesweeper = {
         // Configuring these properties controls how the board is built.
@@ -10,54 +10,29 @@ $(document).ready(function () {
         buildBoard: function buildBoard() {
             // Try building the DOM elements hidden to see if that speeds
             // things up.
-            var table = '<table class="hidden">',
-                sprites = '',
-                i, j, pos;
+            var i, j, table = '<table class="hidden">';
             for (i = 1; i <= minesweeper.rows; i++) {
                 table += '<tr>';
                 for (j = 1; j <= minesweeper.cols; j++) {
-                    pos = j + '_' + i;
-                    table += '<td id="c' + pos + '" class="covered"></td>';
-                    sprites += '<div id="s' + pos + '"  class="hidden sprite"></div>';
+                    table += '<td id="c' + j + '_' + i + '" class="covered"></td>';
                 }
                 table += '</tr>';
             }
             table += '</table>';
-            $('#board').html(table).removeClass('hidden');
-            $('#center').append(sprites);
-            // Put the sprites on top of the tiles
-            $('.sprite').removeClass('hidden').each(function () {
-                var $cell =  $('#' + this.id.replace('s', 'c')),
-                    pos = $cell.position();
-                $(this).css({
-                    // We have to account for the border here. I wish it wasn't
-                    // hard coded...
-                    width: $cell.outerWidth() + 1,
-                    height: $cell.outerHeight() + 1,
-                    left: pos.left,
-                    top: pos.top
-                });
-            });
-
-            $('#board').on('click', 'td', minesweeper.cellClickHandler);
+            $('#board')
+                .html(table)
+                .on('click', 'td', minesweeper.cellClickHandler);
             minesweeper.resetBoard();
         },
         resetBoard: function resetBoard() {
-            var $board = $('#board'),
-                $sprites = $('.sprite'),
-                interval = 1 / $sprites.length,
-                tl;
+            var $tiles = $('td'),
+                tl = new TimelineLite();
 
-            $board.css({opacity: 0}).removeClass('playing win loss');
-            $sprites.css({opacity: 0}).show();
-
-            tl = new TimelineLite();
-            tl.staggerTo($sprites, 0.5, {css: {opacity: 1}}, interval, 0);
-            tl.to($board, 0.5, {css: {opacity: 1}});
-            tl.staggerTo($sprites, 0.5, {css: {opacity: 0}}, interval, -1);
+            tl.to($tiles, 0.5, {css: {opacity: 0}});
             tl.call(function () {
-                $sprites.hide();
+                $('#board').removeClass('hidden playing win loss');
             });
+            tl.staggerTo($tiles, 0.5, {css: {opacity: 1}}, 1 / $tiles.length, 0);
 
             $('#menu').fadeOut(400, function () {
                 $('#new,#verify').hide();
@@ -79,8 +54,8 @@ $(document).ready(function () {
             // Zero the counts on non-mines.
             $('td:not(.mine)').addClass('empty').text('0');
 
+            // Find adjacent non-mine cells and increment their counts.
             $('td.mine')
-                // Find adjacent non-mine cells and increment their counts.
                 .each(function () {
                     minesweeper.adjacentTiles(this.id).not('.mine')
                         .removeClass('empty')
@@ -134,48 +109,35 @@ $(document).ready(function () {
             // console.log(id, x, y, adjacent);
             return $(adjacent);
         },
-        spritesForTiles: function spritesForTiles(tiles) {
-            var sprites = [];
-            $.each(tiles, function () {
-                sprites.push(document.getElementById(this.id.replace('c', 's')));
-            });
-            return $(sprites);
-        },
-        endWithLoss: function endWithLoss() {
-            $('#board').addClass('loss');
-            $('.mine').text("✹");
-            minesweeper.revealEnd();
-        },
-        endWithWin: function endWithWin() {
-            $('#board').addClass('win');
-            $('.mine').text("✓");
-            minesweeper.revealEnd();
-        },
-        revealEnd: function () {
-            var $tiles = $('.covered'),
-                $sprites = minesweeper.spritesForTiles($tiles),
-                tl;
-
-            $sprites.css({'opacity': 1}).show();
-            $tiles.removeClass('covered');
+        revealEnd: function (success) {
+            var tl = new TimelineLite(),
+                $tiles = $('.covered');
 
             $('#new,#cheat,#verify').fadeOut(400, function () {
                 $('#new').fadeIn();
             });
 
-            tl = new TimelineLite();
-            tl.to($sprites, 0.5, {css: {opacity: 0}}, 0, 0, null, function () {
-                $sprites.hide();
+            tl.to($tiles, 0.25, {css: {opacity: 0}});
+            tl.call(function () {
+                if (success) {
+                    $('#board').addClass('win');
+                    $('.mine').text("✓");
+                }
+                else {
+                    $('#board').addClass('loss');
+                    $('.mine').text("✹");
+                }
+                $tiles.removeClass('covered');
             });
+            tl.staggerTo($tiles, 0.5, {css: {opacity: 1}}, 1 / $tiles.length);
         },
         cellClickHandler: function cellClickHandler(event) {
             event.preventDefault();
 
             // Assumes that this is a td element.
-            var $board = $('#board'),
-                $this = $(this),
-                id = this.id,
-                $sprites = minesweeper.spritesForTiles([this]);
+            var tl = new TimelineLite(),
+                $board = $('#board'),
+                $tile = $(this);
 
             // TODO: it would be nice to defer planting the bombs until here
             // so that we could avoid having them die on a first click.
@@ -184,56 +146,49 @@ $(document).ready(function () {
                 $('#new,#verify').fadeIn();
             }
 
-            $sprites.css({'opacity': 1}).show();
-            $this.removeClass('covered');
-            TweenLite.to($sprites, 0.025, {
-                css: {opacity: 0},
-                onComplete: function () {
-                    $sprites.hide();
-                    if ($this.hasClass('mine')) {
+            tl.to($tile, 0.025, {css: {opacity: 0}});
+            tl.call(function () {
+                if ($tile.hasClass('covered')) {
+                    $tile.removeClass('covered');
+                    if ($tile.hasClass('mine')) {
                         // TODO: It would be good if we distinguished the mine
                         // they clicked on from the rest.
-                        minesweeper.endWithLoss();
+                        minesweeper.revealEnd(false);
                     }
-                    else if ($this.hasClass('empty')) {
-                        minesweeper.adjacentTiles(id).filter('.covered').click();
+                    else if ($tile.hasClass('empty')) {
+                        minesweeper.adjacentTiles($tile.attr('id'))
+                            .filter('.covered')
+                            .click();
                     }
                 }
             });
+            tl.to($tile, 0.025, {css: {opacity: 1}});
         },
         newClickHandler: function newClickHandler(event) {
             event.preventDefault();
-
             minesweeper.resetBoard();
         },
         verifyClickHandler: function verifyClickHandler(event) {
             event.preventDefault();
-            if ($('.covered').length === $('.mine').length) {
-                minesweeper.endWithWin();
-            }
-            else {
-                minesweeper.endWithLoss();
-            }
+            minesweeper.revealEnd($('.covered').length === $('.mine').length);
         },
         cheatClickHandler: function cheatClickHandler(event) {
             event.preventDefault();
-            $('#title').text('Mine Cheater');
             // Try to find an empty title at first...
             var tiles = minesweeper.pickRandomTiles(1, ".covered.empty");
-            if (tiles.length === 0) {
+            if (!tiles.length) {
                 // ...but we'll settle for a safe tile.
                 tiles = minesweeper.pickRandomTiles(1, ".covered:not(.mine)");
             }
             $(tiles).click();
+            $('#title').text('Mine Cheater');
         }
     };
+}(jQuery));
 
-    $('#new').on('click', 'a', minesweeper.newClickHandler);
-    $('#verify').on('click', 'a', minesweeper.verifyClickHandler);
-    $('#cheat').on('click', 'a', minesweeper.cheatClickHandler);
-
-    // TODO: reset and click animations are too slow on the larger sizes
-    // so I'm not exposing links to these.
+jQuery(document).ready(function () {
+    'use strict';
+    // TODO: I need to figure out a nice UI for exposing these links.
     var m, d;
     switch (window.location.hash || '') {
         case '#large':
@@ -252,4 +207,8 @@ $(document).ready(function () {
     minesweeper.rows = minesweeper.cols = d;
     minesweeper.mines = m;
     minesweeper.buildBoard();
+
+    jQuery('#new').on('click', 'a', minesweeper.newClickHandler);
+    jQuery('#verify').on('click', 'a', minesweeper.verifyClickHandler);
+    jQuery('#cheat').on('click', 'a', minesweeper.cheatClickHandler);
 });

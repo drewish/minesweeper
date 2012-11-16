@@ -1,0 +1,53 @@
+body {
+   font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+   min-width: 320px;
+}
+#wrapper {
+    float: left;
+    position: relative;
+    left: 50%;
+}
+#center {
+    float: left;
+    position: relative;
+    left: -50%;
+}
+#board {
+    border-collapse:collapse;
+    background-color: #fff;
+}
+#board td {
+    height: 30px;
+    width: 30px;
+    border: 1px solid #666;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+    /* Default to a warning color. */
+    background-color: rgb(247, 148, 30);
+}
+#board.win td.mine {
+    /* A nice green to show you what you found. */
+    background-color: rgb(141, 198, 63);
+}
+#board.loss td.mine {
+    /* Well you stepped in something. */
+    background-color: rgb(238, 39, 58);
+}
+#board td.empty {
+    background-color: #fff;
+}
+#board td.covered {
+    background-color: #eee;
+    /* Get the text out of the way so the numbers don't appear if you
+       highlight the table. You can still copy/paste but this avoids
+       accidental display. */
+    text-indent: -9999px;
+}
+#board td.covered:hover {
+    cursor: pointer;
+}
+.sprite {
+    position: absolute;
+    background-color: rgb(56, 55, 56); /*rgb(37, 170, 225);*/
+}

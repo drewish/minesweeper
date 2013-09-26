@@ -1,214 +1,218 @@
-var minesweeper;
+var Minesweeper;
+
 (function ($) {
-    'use strict';
-    minesweeper = {
-        // Configuring these properties controls how the board is built.
-        mines: 10,
-        rows: 8,
-        cols: 8,
+  'use strict';
+  var transitionEnd = 'webkitTransitionEnd otransitionend oTransitionEnd msTransitionEnd transitionend';
 
-        buildBoard: function buildBoard() {
-            // Try building the DOM elements hidden to see if that speeds
-            // things up.
-            var i, j, table = '<table>';
-            for (i = 1; i <= minesweeper.rows; i++) {
-                table += '<tr>';
-                for (j = 1; j <= minesweeper.cols; j++) {
-                    table += '<td id="c' + j + '_' + i + '" class="covered"></td>';
-                }
-                table += '</tr>';
-            }
-            table += '</table>';
-            $('#board')
-                .html(table)
-                .on('click', 'td', minesweeper.cellClickHandler);
-            minesweeper.resetBoard();
-        },
-        resetBoard: function resetBoard() {
-            var $tiles = $('td'),
-                tl = new TimelineLite();
-
-            $('#menu').fadeOut(400, function () {
-                $('#new,#verify').hide();
-                $('#cheat').show();
-                $('#menu').fadeIn();
-            });
-
-            tl.to($tiles, 0.5, {css: {opacity: 0}});
-            tl.call(function () {
-                $('#board').removeClass('playing win loss');
-                // Clear everything out.
-                $tiles
-                    .removeClass('mine empty adjacent')
-                    .addClass('covered')
-                    .html('&nbsp');
-
-            });
-            tl.staggerTo($tiles, 0.5, {css: {opacity: 1}}, 1 / $tiles.length);
-            tl.call(minesweeper.plantMines);
-        },
-        plantMines: function plantMines() {
-            $(minesweeper.pickRandomTiles(minesweeper.mines)).addClass("mine");
-
-            // Zero the counts on non-mines.
-            $('td:not(.mine)').addClass('empty').text('0');
-
-            // Find adjacent non-mine cells and increment their counts.
-            $('td.mine')
-                .each(function () {
-                    minesweeper.adjacentTiles(this.id).not('.mine')
-                        .removeClass('empty')
-                        .addClass('adjacent')
-                        .text(function (index, text) { return +text + 1;});
-                });
-
-            $('td.empty').html('&nbsp');
-        },
-        // Pick a random tile. You can restrict the pool by passing in a selector.
-        pickRandomTiles: function pickRandom(count, selector) {
-            // Gather up all the tiles...
-            var tiles = $('#board td'),
-                counter,
-                index,
-                results = [];
-            // ...apply any filters...
-            if (selector) {
-                tiles = tiles.filter(selector);
-            }
-            for (counter = count; counter > 0 && tiles.length; counter--) {
-                // ...pick an item randomly...
-                index = Math.floor(Math.random() * tiles.length);
-                // ...then remove it from the list so we don't pick it again.
-                results.push(tiles.splice(index, 1)[0]);
-            }
-
-            return results;
-        },
-        // Given a tiles return the ids of the adjacent tiles.
-        adjacentTiles: function adjacentTiles(tileId) {
-            // Strip the leading character.
-            var adjacent = [],
-                pos = tileId.substr(1).split('_'),
-                x = +pos[0],
-                y = +pos[1],
-                left = (x > 1) ? x - 1 : x,
-                up = (y > 1) ? y - 1 : y,
-                right = (x < minesweeper.cols) ? x + 1 : x,
-                down = (y < minesweeper.rows) ? y + 1 : y,
-                i,
-                j;
-
-            for (i = left; i <= right; i++) {
-                for (j = up; j <= down; j++) {
-                    // Don't put the current cell in there.
-                    if (i !== x || j !== y) {
-                        adjacent.push(document.getElementById("c" + i + '_' + j));
-                    }
-                }
-            }
-            // console.log(id, x, y, adjacent);
-            return $(adjacent);
-        },
-        revealEnd: function (success) {
-            var tl = new TimelineLite(),
-                $tiles = $('.covered');
-
-            $('#new,#cheat,#verify').fadeOut(400, function () {
-                $('#new').fadeIn();
-            });
-
-            tl.to($tiles, 0.25, {css: {opacity: 0}});
-            tl.call(function () {
-                if (success) {
-                    $('#board').addClass('win');
-                    $('.mine').text("✓");
-                }
-                else {
-                    $('#board').addClass('loss');
-                    $('.mine').text("✹");
-                }
-                $tiles.removeClass('covered');
-            });
-            tl.staggerTo($tiles, 0.5, {css: {opacity: 1}}, 1 / $tiles.length);
-        },
-        cellClickHandler: function cellClickHandler(event) {
-            event.preventDefault();
-
-            // Assumes that this is a td element.
-            var tl = new TimelineLite(),
-                $board = $('#board'),
-                $tile = $(this);
-
-            // TODO: it would be nice to defer planting the bombs until here
-            // so that we could avoid having them die on a first click.
-            if (!$board.hasClass('playing')) {
-                $board.addClass('playing');
-                $('#new,#verify').fadeIn();
-            }
-
-            tl.to($tile, 0.025, {css: {opacity: 0}});
-            tl.call(function () {
-                if ($tile.hasClass('covered')) {
-                    $tile.removeClass('covered');
-                    if ($tile.hasClass('mine')) {
-                        // TODO: It would be good if we distinguished the mine
-                        // they clicked on from the rest.
-                        minesweeper.revealEnd(false);
-                    }
-                    else if ($tile.hasClass('empty')) {
-                        minesweeper.adjacentTiles($tile.attr('id'))
-                            .filter('.covered')
-                            .click();
-                    }
-                }
-            });
-            tl.to($tile, 0.025, {css: {opacity: 1}});
-        },
-        newClickHandler: function newClickHandler(event) {
-            event.preventDefault();
-            minesweeper.resetBoard();
-        },
-        verifyClickHandler: function verifyClickHandler(event) {
-            event.preventDefault();
-            minesweeper.revealEnd($('.covered').length === $('.mine').length);
-        },
-        cheatClickHandler: function cheatClickHandler(event) {
-            event.preventDefault();
-            // Try to find an empty title at first...
-            var tiles = minesweeper.pickRandomTiles(1, ".covered.empty");
-            if (!tiles.length) {
-                // ...but we'll settle for a safe tile.
-                tiles = minesweeper.pickRandomTiles(1, ".covered:not(.mine)");
-            }
-            $(tiles).click();
-            $('#title').text('Mine Cheater');
-        }
-    };
-}(jQuery));
-
-jQuery(document).ready(function () {
-    'use strict';
-    // TODO: I need to figure out a nice UI for exposing these links.
-    var m, d;
-    switch (window.location.hash || '') {
-        case '#large':
-            d = 32;
-            m = 120;
-            break;
-        case '#medium':
-            d = 16;
-            m = 30;
-            break;
-        default:
-            d = 8;
-            m = 10;
-            break;
+  $.fn.extend({
+    afterTransition: function (callback) {
+      return this.on(transitionEnd, function(e) {
+        $(this).off(transitionEnd);
+        callback();
+      });
     }
-    minesweeper.rows = minesweeper.cols = d;
-    minesweeper.mines = m;
-    minesweeper.buildBoard();
+  , staggerTransitions: function() {
+      var self = this;
+      return self
+        .last().afterTransition(function() {
+          self.css('transition-delay', 'initial')
+        }).end()
+        .css('transition-delay', function(i) { return (10 + i * 2) + 'ms'; })
+        ;
+    }
+  });
+})(jQuery);
 
-    jQuery('#new').on('click', 'a', minesweeper.newClickHandler);
-    jQuery('#verify').on('click', 'a', minesweeper.verifyClickHandler);
-    jQuery('#cheat').on('click', 'a', minesweeper.cheatClickHandler);
-});
+function Minesweeper(mines, rows, cols) {
+  // Configuring these properties controls how the board is built.
+  this.mine_count = mines || 10;
+  this.rows = rows || 8;
+  this.cols = cols || 8;
+  this.$board = null;
+  this.$tiles = null;
+  this.buildBoard();
+}
+
+Minesweeper.prototype.buildBoard = function buildBoard() {
+  // Try building the DOM elements hidden to see if that speeds
+  // things up.
+  var table = '<table>'
+    , self = this
+    , i, j
+    ;
+  for (i = 1; i <= this.rows; i++) {
+    table += '<tr>';
+    for (j = 1; j <= this.cols; j++) {
+      table += '<td id="c' + j + '_' + i + '" class="covered"></td>';
+    }
+    table += '</tr>';
+  }
+  table += '</table>';
+
+  this.$board = $('#board')
+    .html(table)
+    .on('click', 'td', function () {
+      event.preventDefault();
+      self.revealTile($(this));
+    });
+  this.$tiles = this.$board.find('td');
+
+  this.resetBoard();
+};
+
+Minesweeper.prototype.resetBoard = function resetBoard() {
+  var self = this;
+
+  $('#menu').fadeOut(400, function () {
+    $('#new,#verify').hide();
+    $('#cheat').show();
+    $('#menu').fadeIn();
+  });
+
+  this.$tiles
+    .css('transition-delay', function(i) { return (10 + i * 2) + 'ms'; })
+    .last().afterTransition(function() {
+      $('#board').removeClass('playing win loss');
+      self.$tiles
+        .removeClass('mine empty adjacent')
+        .addClass('covered')
+        ;
+
+      self.plantMines();
+
+      self.$tiles
+        .last().afterTransition(function() {
+          self.$tiles.css('transition-delay', 'initial')
+        }).end()
+        .removeClass('invisible');
+
+    }).end()
+    .addClass('invisible')
+    ;
+};
+
+Minesweeper.prototype.plantMines = function plantMines() {
+  var self = this
+    , $mines = $(this.pickRandomTiles(this.mine_count)).addClass("mine")
+    ;
+
+  // Zero the counts on non-mines so we can increment them.
+  $('td:not(.mine)').addClass('empty').text('0')
+
+  // Find adjacent non-mine cells and increment their counts.
+  $mines.each(function () {
+    self.adjacentTiles($(this)).not('.mine')
+      .removeClass('empty')
+      .addClass('adjacent')
+      .text(function (index, text) { return +text + 1;});
+  });
+
+  $('td.empty').html('&nbsp');
+};
+
+// Pick a random tile. You can restrict the pool by passing in a selector.
+Minesweeper.prototype.pickRandomTiles = function pickRandom(count, selector) {
+  // Gather up all the tiles...
+  var tiles = $('#board td'),
+    counter,
+    index,
+    results = [];
+  // ...apply any filters...
+  if (selector) {
+    tiles = tiles.filter(selector);
+  }
+  for (counter = count; counter > 0 && tiles.length; counter--) {
+    // ...pick an item randomly...
+    index = Math.floor(Math.random() * tiles.length);
+    // ...then remove it from the list so we don't pick it again.
+    results.push(tiles.splice(index, 1)[0]);
+  }
+
+  return results;
+};
+
+// Given a tiles return the ids of the adjacent tiles.
+Minesweeper.prototype.adjacentTiles = function adjacentTiles($tile) {
+  var adjacent = [],
+    // Strip the leading character.
+    pos = $tile.attr('id').substr(1).split('_'),
+    x = +pos[0],
+    y = +pos[1],
+    left = (x > 1) ? x - 1 : x,
+    up = (y > 1) ? y - 1 : y,
+    right = (x < this.cols) ? x + 1 : x,
+    down = (y < this.rows) ? y + 1 : y,
+    i,
+    j;
+
+  for (i = left; i <= right; i++) {
+    for (j = up; j <= down; j++) {
+      // Don't put the current cell in there.
+      if (i !== x || j !== y) {
+        adjacent.push(document.getElementById('c' + i + '_' + j));
+      }
+    }
+  }
+  // console.log(id, x, y, adjacent);
+  return $(adjacent);
+};
+
+Minesweeper.prototype.revealAll = function () {
+  var $board = this.$board
+    , $covered = $board.find('.covered')
+    , success = $covered.length === this.mine_count
+    ;
+
+  $('#new,#cheat,#verify').fadeOut(400, function () {
+    $('#new').fadeIn();
+  });
+
+  $covered
+    .last().afterTransition(function() {
+      if (success) {
+        $board.addClass('win').find('.mine').text("✓");
+      }
+      else {
+        $board.addClass('loss').find('.mine').text("✹");
+      }
+
+      $covered
+        .staggerTransitions()
+        .removeClass('covered invisible');
+
+    }).end()
+    .addClass('invisible')
+    ;
+};
+
+Minesweeper.prototype.revealTile = function ($tile) {
+  var self = this;
+
+  // Bail if the tile isn't covered or is invisible (being removed).
+  if (!$tile.hasClass('covered') || $tile.hasClass('invisible')) {
+    return;
+  }
+
+  // TODO: it would be nice to defer planting the bombs until here
+  // so that we could avoid having them die on a first click.
+  if (!self.$board.hasClass('playing')) {
+    self.$board.addClass('playing');
+    $('#new,#verify').fadeIn();
+  }
+
+  $tile
+    .afterTransition(function() {
+      $tile.removeClass('covered');
+      if ($tile.hasClass('mine')) {
+        // TODO: It would be nice if we distinguished the mine
+        // they clicked on from the rest.
+        self.revealAll();
+      }
+      else if ($tile.hasClass('empty')) {
+        self.adjacentTiles($tile).filter('.covered').click();
+      }
+      $tile.removeClass('invisible');
+    })
+    .addClass('invisible')
+    ;
+}

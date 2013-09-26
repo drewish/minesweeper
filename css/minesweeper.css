@@ -26,6 +26,11 @@ body {
     text-align: center;
     color: white;
     font-weight: bold;
+
+    -webkit-transition: opacity 100ms linear;
+    -moz-transition: opacity 100ms linear;
+    -o-transition: opacity 100ms linear;
+    transition: opacity 100ms linear;
 }
 /* Color scheme from http://www.colourlovers.com/palette/2530958/Supplies4Me */
 #board .adjacent {
@@ -53,6 +58,9 @@ body {
 }
 #board .covered:hover {
     cursor: pointer;
+}
+.invisible {
+    opacity: 0;
 }
 .hidden {
     display: none;

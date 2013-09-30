@@ -15,7 +15,7 @@ var Minesweeper;
       var self = this;
       return self
         .last().afterTransition(function() {
-          self.css('transition-delay', 'initial')
+          self.css('transition-delay', 'initial');
         }).end()
         .css('transition-delay', function(i) { return (10 + i * 2) + 'ms'; })
         ;
@@ -82,7 +82,7 @@ Minesweeper.prototype.resetBoard = function resetBoard() {
 
       self.$tiles
         .last().afterTransition(function() {
-          self.$tiles.css('transition-delay', 'initial')
+          self.$tiles.css('transition-delay', 'initial');
         }).end()
         .removeClass('invisible');
 
@@ -97,7 +97,7 @@ Minesweeper.prototype.plantMines = function plantMines() {
     ;
 
   // Zero the counts on non-mines so we can increment them.
-  $('td:not(.mine)').addClass('empty').text('0')
+  $('td:not(.mine)').addClass('empty').text('0');
 
   // Find adjacent non-mine cells and increment their counts.
   $mines.each(function () {
@@ -203,16 +203,16 @@ Minesweeper.prototype.revealTile = function ($tile) {
   $tile
     .afterTransition(function() {
       $tile.removeClass('covered');
-      if ($tile.hasClass('mine')) {
+      if ($tile.hasClass('empty')) {
+        self.adjacentTiles($tile).filter('.covered').click();
+      }
+      if ($tile.hasClass('mine') || !$('.covered:not(.mine)').length) {
         // TODO: It would be nice if we distinguished the mine
         // they clicked on from the rest.
         self.revealAll();
-      }
-      else if ($tile.hasClass('empty')) {
-        self.adjacentTiles($tile).filter('.covered').click();
       }
       $tile.removeClass('invisible');
     })
     .addClass('invisible')
     ;
-}
+};
